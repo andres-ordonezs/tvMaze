@@ -3,8 +3,10 @@
 const $showsList = $("#showsList");
 const $episodesArea = $("#episodesArea");
 const $searchForm = $("#searchForm");
-//TODO: Add base URL as a global constant
-//TODO: DEFAULT IMAGE URL CONSTANT
+const BASE_URL = "https://api.tvmaze.com";
+const DEFAULT_IMG = 'https://store-images.s-microsoft.com/image/apps.65316.13510798887490672.6e1ebb25-96c8-4504-b714-1f7cbca3c5ad.f9514a23-1eb8-4916-a18e-99b1a9817d15?mode=scale&q=90&h=300&w=300';
+
+$showsList.on("click", ".Show-getEpisodes", getAndDisplayEpisodes);
 
 /** Given a search term, search for tv shows that match that query.
  *
@@ -15,7 +17,7 @@ const $searchForm = $("#searchForm");
 
 async function getShowsByTerm(showName) {
   // ADD: Remove placeholder & make request to TVMaze search shows API.
-  const response = await fetch(`https://api.tvmaze.com/search/shows?q=${showName}`);
+  const response = await fetch(`${BASE_URL}/search/shows?q=${showName}`);
   const showData = await response.json();
   console.log(showData);
   return showData.map(show => {
@@ -23,30 +25,10 @@ async function getShowsByTerm(showName) {
       id: show.show.id,
       name: show.show.name,
       summary: show.show.summary === null ? 'No Summary Available' : show.show.summary,
-      image: show.show.image === null ? 'https://store-images.s-microsoft.com/image/apps.65316.13510798887490672.6e1ebb25-96c8-4504-b714-1f7cbca3c5ad.f9514a23-1eb8-4916-a18e-99b1a9817d15?mode=scale&q=90&h=300&w=300' : show.show.image.medium,
+      image: show.show.image === null ? DEFAULT_IMG : show.show.image.medium,
     }
     );
   });
-  /* console.log(showData); */
-
-  /* return [
-    {
-      id: 1767,
-      name: "The Bletchley Circle",
-      summary:∫
-        `<p><b>The Bletchley Circle</b> follows the journey of four ordinary
-           women with extraordinary skills that helped to end World War II.</p>
-         <p>Set in 1952, Susan, Millie, Lucy and Jean have returned to their
-           normal lives, modestly setting aside the part they played in
-           producing crucial intelligence, which helped the Allies to victory
-           and shortened the war. When Susan discovers a hidden code behind an
-           unsolved murder she is met by skepticism from the police. She
-           quickly realises she can only begin to crack the murders and bring
-           the culprit to justice with her former friends.</p>`,
-      image:
-        "http://static.tvmaze.com/uploads/images/medium_portrait/147/369403.jpg"
-    }
-  ]; */
 }
 
 
@@ -104,10 +86,35 @@ $searchForm.on("submit", async function handleSearchForm(evt) {
  *      { id, name, season, number }
  */
 
-// async function getEpisodesOfShow(id) { }
+async function getEpisodesOfShow(id) {
+  const response = await fetch(`${BASE_URL}/shows/${id}/episodes`);
+  const episodesData = await response.json();
 
-/** Write a clear docstring for this function... */
+  return episodesData.map(epData => {
+    return {
+      id: epData.id,
+      name: epData.name,
+      season: epData.season,
+      number: epData.number
+    }
+  });
+}
 
-// function displayEpisodes(episodes) { }
+/** Takes an array of episode objects and displays then in the DOM. */
+function displayEpisodes(episodes) {
+  const $episodesList = $('<ul>');
+  for (const ep of episodes) {
+    $episodesList.append($(`
+      <li>${ep.name} (season ${ep.season}, number ${ep.number})</li>
+    `));
+  }
+  $episodesArea.append($episodesList);
+  $episodesArea.show();
+ }
 
-// add other functions that will be useful / match our structure & design
+/** Controller function to fetch episode data and display in DOM.  */
+ async function getAndDisplayEpisodes(evt) {
+    const showId = $(evt.target).closest(".Show").attr("data-show-id");
+    const episodes = await getEpisodesOfShow(showId);
+    displayEpisodes(episodes);
+ }
